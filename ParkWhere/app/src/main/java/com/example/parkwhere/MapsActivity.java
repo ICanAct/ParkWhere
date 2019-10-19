@@ -1,38 +1,30 @@
 package com.example.parkwhere;
 
-import androidx.annotation.NonNull;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
-import android.content.pm.PackageManager;
+
+import android.content.res.AssetManager;
+import android.os.AsyncTask;
 import android.os.Bundle;
-import android.util.Log;
-import com.google.android.gms.common.api.ApiException;
+import android.os.Environment;
+
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.libraries.places.api.model.Place;
-import com.google.android.libraries.places.api.model.PlaceLikelihood;
-import com.google.android.libraries.places.api.net.FindCurrentPlaceRequest;
-import com.google.android.libraries.places.api.net.FindCurrentPlaceResponse;
-import com.google.android.libraries.places.api.net.PlacesClient;
-import com.google.android.libraries.places.api.Places;
-import java.util.Arrays;
-import java.util.List;
 
-import static android.Manifest.permission.ACCESS_FINE_LOCATION;
+import java.io.File;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private static final String TAG = "";
     private GoogleMap mMap;
-    private Place apporx_place;
-    private double max_likelihood = 0;
+    //private Place apporx_place;
+    //private double max_likelihood = 0;
 
+    private String path = "carpark_info.xlsx";
 
 
 
@@ -46,11 +38,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
-
-       apporx_place = getLocation();
+        new databaseRead().execute(path); // fires up the async task for the database creation.
+      // apporx_place = getLocation();
     }
 
-    private Place getLocation(){
+   /* private Place getLocation(){
         Places.initialize(getApplicationContext(), "AIzaSyDyZWootdcmcMONm6MfBirKqIrOjGuRLoE");
         PlacesClient placesClient = Places.createClient(this);
         List<Place.Field> placeFields = Arrays.asList(Place.Field.NAME);
@@ -91,7 +83,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private void getLocationPermission(){
 
            // NEED TO WRITE LOGIC TO ASK USER FOR PERMISSIONS FOR THE ACCESS.
-    }
+    }*/
 
     /**
      * Manipulates the map once available.
@@ -107,9 +99,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         mMap = googleMap;
 
         // Add a marker in Sydney and move the camera
-        LatLng user_pos = apporx_place.getLatLng();
-       // LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(user_pos).title("User Position Marker"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(user_pos));
+        //LatLng user_pos = apporx_place.getLatLng();
+       LatLng sydney = new LatLng(-34, 151);
+        mMap.addMarker(new MarkerOptions().position(sydney).title("Sydney Position Marker"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+    }
+
+    private class databaseRead extends AsyncTask<String, Integer, String> {
+
+        @Override
+        protected String doInBackground(String... path) {
+            DBController controller = new DBController(getApplicationContext());
+            controller.getWritableDatabase();
+            String name = "carparks";
+            controller.readXLS(path[0], name);
+            return "The values stored into the database successfully!";
+        }
+
+        @Override
+        protected void onPostExecute(String result){
+            super.onPostExecute(result);
+            // Anything to do after database process completes.
+        }
     }
 }
