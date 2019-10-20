@@ -7,12 +7,16 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import com.google.android.gms.maps.model.LatLng;
+import org.apache.poi.hssf.usermodel.HSSFCell;
+import org.apache.poi.hssf.usermodel.HSSFRow;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.xssf.usermodel.XSSFCell;
-import org.apache.poi.xssf.usermodel.XSSFRow;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
@@ -31,17 +35,20 @@ public class DBController extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        String query;
-        query = "CREATE TABLE IF NOT EXISTS carparks (car_park_no VARCHAR PRIMARY KEY, address VARCHAR, Latitude REAL, Longitude REAL, " +
-                "car_park_type VARCHAR, type_of_parking_system VARCHAR, short_term_parking VARCHAR, free_parking VARCHAR, night_parking VARCHAR, car_park_decks INTEGER, gantry_height REAL, car_park_basement VARCHAR)";
-        db.execSQL(query);
+        String query_carpark, query_avail;
+        query_carpark = "CREATE TABLE IF NOT EXISTS carparks (car_park_no VARCHAR PRIMARY KEY, address VARCHAR, Latitude REAL, Longitude REAL, " +
+                "car_park_type VARCHAR, type_of_parking_system VARCHAR, short_term_parking VARCHAR, free_parking VARCHAR, night_parking VARCHAR, car_park_decks REAL, gantry_height REAL, car_park_basement VARCHAR)";
+        query_avail = "CREATE TABLE IF NOT EXISTS availability (car_park_no VARCHAR, total_lots INTEGER, lot_type VARCHAR, lots_available INTEGER, PRIMARY KEY(car_park_no, lot_type))";
+        db.execSQL(query_carpark);
+        db.execSQL(query_avail);
     }
 
-    @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         String query;
         query = "DROP TABLE IF EXISTS carparks"; // UPDATE THE QUERY STATEMENT
         db.execSQL(query);
+        db.execSQL("DROP TABLE IF EXISTS availability");
+
         onCreate(db);
 
     }
@@ -58,23 +65,24 @@ public class DBController extends SQLiteOpenHelper {
     protected void readXLS(String path, String tableName){
         SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("delete from "+ tableName);
+        db.beginTransaction();
         try {
             AssetManager manager = context.getAssets();
             InputStream file  = manager.open(path);
-           // Workbook wb = WorkbookFactory.create(file);
-            XSSFWorkbook myWorkBook = new XSSFWorkbook(file);
-            XSSFSheet mySheet = myWorkBook.getSheetAt(0);
+
+            HSSFWorkbook myWorkBook = new HSSFWorkbook(file);
+            HSSFSheet mySheet = myWorkBook.getSheetAt(0);
             Iterator<Row> rowIterator = mySheet.rowIterator();
             ContentValues contentvalues = new ContentValues();
             int rowno = 0;
 
             while(rowIterator.hasNext()){
-                XSSFRow myRow = (XSSFRow) rowIterator.next();
+                HSSFRow myRow = (HSSFRow) rowIterator.next();
                 if(rowno != 0){
                     Iterator<Cell> cellIterator = myRow.cellIterator();
                     int colno = 0;
                     while( cellIterator.hasNext()){
-                        XSSFCell myCell = (XSSFCell) cellIterator.next();
+                        HSSFCell myCell = (HSSFCell) cellIterator.next();
                         switch (colno) {
                             case 0:
                                 contentvalues.put("car_park_no", myCell.toString());
@@ -104,7 +112,7 @@ public class DBController extends SQLiteOpenHelper {
                                 contentvalues.put("night_parking", myCell.toString());
                                 break;
                             case 9:
-                                contentvalues.put("car_park_decks", Integer.valueOf(myCell.toString()));
+                                contentvalues.put("car_park_decks", Double.parseDouble(myCell.toString()));
                                 break;
                             case 10:
                                 contentvalues.put("gantry_height", Double.parseDouble(myCell.toString()));
@@ -121,13 +129,45 @@ public class DBController extends SQLiteOpenHelper {
                 }
                 rowno++;
             }
-            db.setTransactionSuccessful();
-            db.endTransaction();
+
         } catch (IOException e) {
             if (db.inTransaction())
                 db.endTransaction();
 
             e.printStackTrace();
         }
+        finally {
+            db.setTransactionSuccessful();
+            db.endTransaction();
+        }
     }
+
+    protected void carParkAvailability(JSONArray response, String tableName){
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("delete from " + tableName);
+        ContentValues contentValues = new ContentValues();
+        db.beginTransaction();
+        for(int i = 0; i<response.length();i++){
+            JSONObject carParkData = null;
+            try {
+                carParkData = (JSONObject) response.get(i);
+                String carParkNumber = carParkData.get("carpark_number").toString();
+                JSONObject info = (JSONObject) carParkData.getJSONArray("carpark_info").get(0);
+                int lots = Integer.parseInt(info.get("total_lots").toString());
+                String type = info.get("lot_type").toString();
+                int lotsAvail = Integer.parseInt(info.get("lots_available").toString());
+                contentValues.put("car_park_no", carParkNumber);
+                contentValues.put("total_lots", lots);
+                contentValues.put("lots_available", lotsAvail);
+                contentValues.put("lot_type", type);
+                db.insert(tableName, null, contentValues);
+            }catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+        }
+        db.setTransactionSuccessful();
+        db.endTransaction();
+    }
+
 }

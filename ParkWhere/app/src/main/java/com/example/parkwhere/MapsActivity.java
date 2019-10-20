@@ -2,44 +2,46 @@ package com.example.parkwhere;
 
 import androidx.fragment.app.FragmentActivity;
 
-import android.content.res.AssetManager;
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Environment;
 
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.libraries.places.api.model.Place;
+import com.google.gson.JsonArray;
 
-import java.io.File;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
-
-    private static final String TAG = "";
-    private GoogleMap mMap;
-    //private Place apporx_place;
-    //private double max_likelihood = 0;
-
-    private String path = "carpark_info.xlsx";
-
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-
-
+        String path = "carpark_info.xls";
+        String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+        assert mapFragment != null;
         mapFragment.getMapAsync(this);
         new databaseRead().execute(path); // fires up the async task for the database creation.
-      // apporx_place = getLocation();
+        new availabilityReq(getApplicationContext()).execute(availability);
+        //private Place apporx_place;
+        //private double max_likelihood = 0;
+        // apporx_place = getLocation();
     }
 
    /* private Place getLocation(){
@@ -96,16 +98,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
 
         // Add a marker in Sydney and move the camera
         //LatLng user_pos = apporx_place.getLatLng();
        LatLng sydney = new LatLng(-34, 151);
-        mMap.addMarker(new MarkerOptions().position(sydney).title("Sydney Position Marker"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        googleMap.addMarker(new MarkerOptions().position(sydney).title("Sydney Position Marker"));
+        googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
     }
 
-    private class databaseRead extends AsyncTask<String, Integer, String> {
+    private class  databaseRead extends AsyncTask<String, Integer, String> {
 
         @Override
         protected String doInBackground(String... path) {
@@ -122,4 +123,45 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             // Anything to do after database process completes.
         }
     }
+
+    private class availabilityReq extends AsyncTask<String, Integer, String> {
+
+        private Context context;
+
+        private availabilityReq(Context context) {
+            this.context = context;
+        }
+
+        @Override
+        protected String doInBackground(String... strings) {
+
+            RequestQueue queue = Volley.newRequestQueue(context);
+            String URL = strings[0];
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                    (Request.Method.GET, URL, null, response -> {
+                        try {
+                            JSONObject carPark_info = (JSONObject) response.getJSONArray("items").get(0);
+                            JSONArray info = carPark_info.getJSONArray("carpark_data");
+                            DBController controller = new DBController(getApplicationContext());
+                            controller.getWritableDatabase();
+                            String name = "availability";
+                            controller.carParkAvailability(info, name);
+                        } catch (JSONException e) {
+                            e.printStackTrace();
+                        }
+
+                    }, error -> {
+                        // TODO: Handle error
+
+                    });
+            queue.add(jsonObjectRequest);
+            return null;
+        }
+
+
+
+    }
+
 }
+
+
