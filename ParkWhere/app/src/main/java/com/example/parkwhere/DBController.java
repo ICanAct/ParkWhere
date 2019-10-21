@@ -29,6 +29,7 @@ public class DBController extends SQLiteOpenHelper {
     private Context context;
     private ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
     private String path = "carpark_info.xls";;
+    protected SQLiteDatabase mDefaultWritableDatabase = this.getWritableDatabase();
     protected DBController(Context applicationcontext){
         super(applicationcontext, "CarparkDB.db", null, 1);
         // DATABASE is being created.
@@ -45,7 +46,7 @@ public class DBController extends SQLiteOpenHelper {
         query_avail = "CREATE TABLE IF NOT EXISTS availability (car_park_no VARCHAR, total_lots INTEGER, lot_type VARCHAR, lots_available INTEGER, PRIMARY KEY(car_park_no, lot_type))";
         db.execSQL(query_carpark);
         db.execSQL(query_avail);
-        readXLS(path, "carparks");
+        readXLS(db,path, "carparks");
 
     }
 
@@ -64,8 +65,8 @@ public class DBController extends SQLiteOpenHelper {
         double user_lng = latLng.longitude;       // to the radius calculated.
         float[] results = new float[1];
         String selectQuery = "SELECT latitude, longitude FROM carparks";
-        SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = db.rawQuery(selectQuery, null);
+        //SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = mDefaultWritableDatabase.rawQuery(selectQuery, null);
         while(cursor.moveToNext()){
             int index = cursor.getColumnIndexOrThrow("Latitude");
             double lat = cursor.getDouble(index);
@@ -74,7 +75,8 @@ public class DBController extends SQLiteOpenHelper {
             Location.distanceBetween(user_lat,user_lng, lat, lng,results);
             if(results[0]<1000){
                 selectQuery = "SELECT * FROM carparks WHERE Latitude = "+lat+ " AND Longitude = "+lng;
-                Cursor cursor1 = db.rawQuery(selectQuery,null);
+                Cursor cursor1 = mDefaultWritableDatabase.rawQuery(selectQuery,null);
+                cursor1.moveToFirst();
                 String number = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_no"));
                 String address = cursor1.getString(cursor1.getColumnIndexOrThrow("address"));
                 double latitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Latitude"));
@@ -100,8 +102,8 @@ public class DBController extends SQLiteOpenHelper {
         return nearbyCarParks;
     }
 
-    protected void readXLS(String path, String tableName){
-        SQLiteDatabase db = this.getWritableDatabase();
+    protected void readXLS(SQLiteDatabase db,String path, String tableName){
+        //SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("delete from "+ tableName);
         db.beginTransaction();
         try {
@@ -181,10 +183,10 @@ public class DBController extends SQLiteOpenHelper {
     }
 
     protected void carParkAvailability(JSONArray response, String tableName){
-        SQLiteDatabase db = this.getWritableDatabase();
-        db.execSQL("delete from " + tableName);
+        //SQLiteDatabase db = this.getWritableDatabase();
+        mDefaultWritableDatabase.execSQL("delete from " + tableName);
         ContentValues contentValues = new ContentValues();
-        db.beginTransaction();
+        mDefaultWritableDatabase.beginTransaction();
         for(int i = 0; i<response.length();i++){
             JSONObject carParkData = null;
             try {
@@ -198,14 +200,25 @@ public class DBController extends SQLiteOpenHelper {
                 contentValues.put("total_lots", lots);
                 contentValues.put("lots_available", lotsAvail);
                 contentValues.put("lot_type", type);
-                db.insert(tableName, null, contentValues);
+                mDefaultWritableDatabase.insert(tableName, null, contentValues);
             }catch (JSONException e) {
                 e.printStackTrace();
             }
 
         }
-        db.setTransactionSuccessful();
-        db.endTransaction();
+        mDefaultWritableDatabase.setTransactionSuccessful();
+        mDefaultWritableDatabase.endTransaction();
+    }
+
+    @Override
+    public SQLiteDatabase getWritableDatabase() {
+        final SQLiteDatabase db;
+        if(mDefaultWritableDatabase != null){
+            db = mDefaultWritableDatabase;
+        } else {
+            db = super.getWritableDatabase();
+        }
+        return db;
     }
 
 }

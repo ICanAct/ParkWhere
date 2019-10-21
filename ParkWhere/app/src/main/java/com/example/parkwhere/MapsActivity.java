@@ -1,10 +1,11 @@
 package com.example.parkwhere;
 
-import androidx.fragment.app.FragmentActivity;
-
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
+
+import androidx.fragment.app.FragmentActivity;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -16,6 +17,7 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -175,6 +177,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             LatLng test = new LatLng(1.367551, 103.8535086);
             DBController dbController = new DBController(getApplicationContext());
             nearbyCarParks = dbController.getCarparks(test);
+            if(nearbyCarParks != null)
+            {
+                for(int i=0;i<nearbyCarParks.size();i++)
+                Log.d("nearbyCarpark",nearbyCarParks.get(i).getCar_park_no().toString() + "Lat"+nearbyCarParks.get(i).getLatitude()+"Lng"+nearbyCarParks.get(i).getLongitude());
+
+                int size = nearbyCarParks.size();
+                Log.d("size", String.valueOf(size));
+            }
 
             return null;
         }
