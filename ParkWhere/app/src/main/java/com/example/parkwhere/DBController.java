@@ -6,6 +6,8 @@ import android.content.res.AssetManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.location.Location;
+
 import com.google.android.gms.maps.model.LatLng;
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -19,12 +21,14 @@ import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Iterator;
 
 
 public class DBController extends SQLiteOpenHelper {
     private Context context;
-
+    private ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
+    private String path = "carpark_info.xls";;
     protected DBController(Context applicationcontext){
         super(applicationcontext, "CarparkDB.db", null, 1);
         // DATABASE is being created.
@@ -41,6 +45,8 @@ public class DBController extends SQLiteOpenHelper {
         query_avail = "CREATE TABLE IF NOT EXISTS availability (car_park_no VARCHAR, total_lots INTEGER, lot_type VARCHAR, lots_available INTEGER, PRIMARY KEY(car_park_no, lot_type))";
         db.execSQL(query_carpark);
         db.execSQL(query_avail);
+        readXLS(path, "carparks");
+
     }
 
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -53,13 +59,45 @@ public class DBController extends SQLiteOpenHelper {
 
     }
 
-    public Cursor getCarparks(LatLng latLng){
-        double lat = latLng.latitude;        // FOR the query part please change accordingly
-        double lng = latLng.longitude;       // to the radius calculated.
-        String selectQuery = "SELECT * FROM carparks WHERE latitude< lat OR longitude < lng";
+    public ArrayList<CarPark> getCarparks(LatLng latLng){ // RETURNS THE ARRAY OF CARPARKS NEARBY THE LOCATION
+        double user_lat = latLng.latitude;        // FOR the query part please change accordingly
+        double user_lng = latLng.longitude;       // to the radius calculated.
+        float[] results = new float[1];
+        String selectQuery = "SELECT latitude, longitude FROM carparks";
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
-        return cursor;
+        while(cursor.moveToNext()){
+            int index = cursor.getColumnIndexOrThrow("Latitude");
+            double lat = cursor.getDouble(index);
+            index = cursor.getColumnIndexOrThrow("Longitude");
+            double lng= cursor.getDouble(index);
+            Location.distanceBetween(user_lat,user_lng, lat, lng,results);
+            if(results[0]<1000){
+                selectQuery = "SELECT * FROM carparks WHERE Latitude = "+lat+ " AND Longitude = "+lng;
+                Cursor cursor1 = db.rawQuery(selectQuery,null);
+                String number = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_no"));
+                String address = cursor1.getString(cursor1.getColumnIndexOrThrow("address"));
+                double latitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Latitude"));
+                double longitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Longitude"));
+                String system_type = cursor1.getString(cursor1.getColumnIndexOrThrow("type_of_parking_system"));
+                String car_park_type = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_type"));
+                String free = cursor1.getString(cursor1.getColumnIndexOrThrow("free_parking"));
+                String term = cursor1.getString(cursor1.getColumnIndexOrThrow("short_term_parking"));
+                String night = cursor1.getString(cursor1.getColumnIndexOrThrow("night_parking"));
+                int decks = cursor1.getInt(cursor1.getColumnIndexOrThrow("car_park_decks"));
+                double height  = cursor1.getDouble(cursor1.getColumnIndexOrThrow("gantry_height"));
+                String basement = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_basement"));
+                boolean val1 = false;
+                if( basement == "Y"){
+                    val1 = true;
+                }
+                CarPark carpark = new CarPark(number, address, latitude,longitude,car_park_type, system_type,term, night,free, decks, height,val1);
+                nearbyCarParks.add(carpark);
+            }
+
+
+        }
+        return nearbyCarParks;
     }
 
     protected void readXLS(String path, String tableName){

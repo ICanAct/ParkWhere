@@ -9,13 +9,13 @@ public class CarPark {
     private String car_park_type;
     private String parkingSystem;
     private String short_term_parking;
-    private boolean isFree_parking;
+    private String night_parking;
+    private String free_parking;
     private int car_park_decks;
     private double gantry_height;
     private boolean isCar_park_basement;
 
-    public CarPark(String number, String address, double lat, double lng,
-                   String type, String system, String term, boolean free, int decks, double height, boolean basement){
+    public CarPark(String number, String address, double lat, double lng, String type, String system, String term, String night,String free, int decks, double height, boolean basement){
 
         car_park_no = number;
         this.address = address;
@@ -24,7 +24,8 @@ public class CarPark {
         car_park_type = type;
         parkingSystem = system;
         short_term_parking = term;
-        isFree_parking = free;
+        night_parking = night;
+        free_parking = free;
         car_park_decks = decks;
         gantry_height = height;
         isCar_park_basement = basement;
@@ -57,8 +58,8 @@ public class CarPark {
     public String getShort_term_parking(){
         return short_term_parking;
     }
-    public boolean isFree_parking(){
-        return isFree_parking;
+    public String getFree_parking(){
+        return free_parking;
     }
     public  int getCar_park_decks(){
         return car_park_decks;
@@ -91,8 +92,8 @@ public class CarPark {
         this.car_park_type = car_park_type;
     }
 
-    public void setFree_parking(boolean free_parking) {
-        isFree_parking = free_parking;
+    public void setFree_parking(String free_parking) {
+        free_parking = free_parking;
     }
 
     public void setGantry_height(double gantry_height) {

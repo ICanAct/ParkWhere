@@ -16,32 +16,35 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.gson.JsonArray;
-
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        String path = "carpark_info.xls";
         String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         assert mapFragment != null;
         mapFragment.getMapAsync(this);
-        new databaseRead().execute(path); // fires up the async task for the database creation.
         new availabilityReq(getApplicationContext()).execute(availability);
+        DBController controller = new DBController(getApplicationContext());
+        controller.getWritableDatabase();
+        new fetchNearbyCarParks().execute("");
         //private Place apporx_place;
         //private double max_likelihood = 0;
         // apporx_place = getLocation();
+
     }
 
    /* private Place getLocation(){
@@ -104,9 +107,12 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
        LatLng sydney = new LatLng(-34, 151);
         googleMap.addMarker(new MarkerOptions().position(sydney).title("Sydney Position Marker"));
         googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+
+
+
     }
 
-    private class  databaseRead extends AsyncTask<String, Integer, String> {
+    /*private class  databaseRead extends AsyncTask<String, Integer, String> {
 
         @Override
         protected String doInBackground(String... path) {
@@ -122,7 +128,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             super.onPostExecute(result);
             // Anything to do after database process completes.
         }
-    }
+    }*/
 
     private class availabilityReq extends AsyncTask<String, Integer, String> {
 
@@ -160,6 +166,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
+    }
+
+    private class fetchNearbyCarParks extends AsyncTask<String, Integer, Void> {
+        ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
+        @Override
+        protected Void doInBackground(String... strings) {
+            LatLng test = new LatLng(1.367551, 103.8535086);
+            DBController dbController = new DBController(getApplicationContext());
+            nearbyCarParks = dbController.getCarparks(test);
+
+            return null;
+        }
     }
 
 }
