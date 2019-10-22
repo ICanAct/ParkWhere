@@ -1,6 +1,7 @@
 package com.example.parkwhere;
 
 import android.content.Context;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -11,24 +12,30 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.android.gms.tasks.Tasks;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.concurrent.ExecutionException;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-
-
+    private FusedLocationProviderClient fusedLocationClient;
+    private LatLng user;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -46,6 +53,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //private Place apporx_place;
         //private double max_likelihood = 0;
         // apporx_place = getLocation();
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
+        fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+
+                user = new LatLng(location.getLatitude(), location.getLongitude());
+                if (location != null){
+                    Log.d("Location", "Location is not null");
+                }
+                else {
+
+                }
+            }
+        });
+
+         //user = new LatLng(user_loc.getLatitude(), user_loc.getLongitude());
+
 
     }
 
@@ -106,10 +130,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
         //LatLng user_pos = apporx_place.getLatLng();
-       LatLng sydney = new LatLng(-34, 151);
-        googleMap.addMarker(new MarkerOptions().position(sydney).title("Sydney Position Marker"));
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+      // final LatLng loc = null;
 
+            googleMap.addMarker(new MarkerOptions().position(user).title("User Position Marker"));
+            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
+
+
+      // LatLng sydney = new LatLng(-34, 151);
 
 
     }
@@ -180,7 +207,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             if(nearbyCarParks != null)
             {
                 for(int i=0;i<nearbyCarParks.size();i++)
-                Log.d("nearbyCarpark",nearbyCarParks.get(i).getCar_park_no().toString() + "Lat"+nearbyCarParks.get(i).getLatitude()+"Lng"+nearbyCarParks.get(i).getLongitude());
+                Log.d("nearbyCarpark",nearbyCarParks.get(i).getCar_park_no() + "Lat"+nearbyCarParks.get(i).getLatitude()+"Lng"+nearbyCarParks.get(i).getLongitude());
 
                 int size = nearbyCarParks.size();
                 Log.d("size", String.valueOf(size));
