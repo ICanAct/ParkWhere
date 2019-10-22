@@ -12,20 +12,15 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
-<<<<<<< HEAD
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
-=======
->>>>>>> 650bd176c47815408c9740fa1730c06dfc362ceb
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnSuccessListener;
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -37,13 +32,10 @@ import java.util.concurrent.ExecutionException;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
-<<<<<<< HEAD
     private FusedLocationProviderClient fusedLocationClient;
     private LatLng user;
-=======
     protected ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
     private GoogleMap mMap;
->>>>>>> 650bd176c47815408c9740fa1730c06dfc362ceb
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -140,13 +132,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         // Add a marker in Sydney and move the camera
         //LatLng user_pos = apporx_place.getLatLng();
-<<<<<<< HEAD
       // final LatLng loc = null;
 
             googleMap.addMarker(new MarkerOptions().position(user).title("User Position Marker"));
             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
 
-=======
         /*LatLng sydney = new LatLng(1.367551, 103.8535086);
         googleMap.addMarker(new MarkerOptions().position(sydney).title("Some SG place"));
         googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));*/
@@ -155,7 +145,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         if(nearbyCarParks.size() >0)
         setMarkers(nearbyCarParks,mMap);
->>>>>>> 650bd176c47815408c9740fa1730c06dfc362ceb
 
       // LatLng sydney = new LatLng(-34, 151);
 
@@ -227,14 +216,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             nearbyCarParks = dbController.getCarparks(test);
             if(nearbyCarParks != null)
             {
-<<<<<<< HEAD
+
                 for(int i=0;i<nearbyCarParks.size();i++)
                 Log.d("nearbyCarpark",nearbyCarParks.get(i).getCar_park_no() + "Lat"+nearbyCarParks.get(i).getLatitude()+"Lng"+nearbyCarParks.get(i).getLongitude());
-=======
+
                 for(int i=0;i<nearbyCarParks.size();i++) {
                     Log.d("nearbyCarpark", nearbyCarParks.get(i).getCar_park_no().toString() + "Lat" + nearbyCarParks.get(i).getLatitude() + "Lng" + nearbyCarParks.get(i).getLongitude());
                 }
->>>>>>> 650bd176c47815408c9740fa1730c06dfc362ceb
 
                 int size = nearbyCarParks.size();
                 Log.d("size", String.valueOf(size));
