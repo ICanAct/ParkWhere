@@ -60,8 +60,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             @Override
             public void onSuccess(Location location) {
 
-                user = new LatLng(location.getLatitude(), location.getLongitude());
+
                 if (location != null){
+                    user = new LatLng(location.getLatitude(), location.getLongitude());
+                    mMap.addMarker(new MarkerOptions().position(user).title("User Location place"));
                     Log.d("Location", "Location is not null");
                 }
                 else {
@@ -134,8 +136,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //LatLng user_pos = apporx_place.getLatLng();
       // final LatLng loc = null;
 
-            googleMap.addMarker(new MarkerOptions().position(user).title("User Position Marker"));
-            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
+           // googleMap.addMarker(new MarkerOptions().position(user).title("User Position Marker"));
+           // googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
 
         /*LatLng sydney = new LatLng(1.367551, 103.8535086);
         googleMap.addMarker(new MarkerOptions().position(sydney).title("Some SG place"));
