@@ -46,7 +46,8 @@ public class DBController extends SQLiteOpenHelper {
         query_avail = "CREATE TABLE IF NOT EXISTS availability (car_park_no VARCHAR, total_lots INTEGER, lot_type VARCHAR, lots_available INTEGER, PRIMARY KEY(car_park_no, lot_type))";
         db.execSQL(query_carpark);
         db.execSQL(query_avail);
-        readXLS(db,path, "carparks");
+       // readXLS(db,path, "carparks");
+
 
     }
 

@@ -1,11 +1,16 @@
 package com.example.parkwhere;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 
 import com.android.volley.Request;
@@ -20,28 +25,38 @@ import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.security.Permissions;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutionException;
 
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener {
 
-    private FusedLocationProviderClient fusedLocationClient;
+    private static final String TAG = MapsActivity.class.getSimpleName() ;
+    private FusedLocationProviderClient mFusedLocationProviderClient;
     private LatLng user;
     protected ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
     private GoogleMap mMap;
+    private final LatLng mDefaultLocation = new LatLng(-33.8523341, 151.2106085);
+    private static final int DEFAULT_ZOOM = 15;
+    private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
+    private boolean mLocationPermissionGranted;
+    private Location mLastKnownLocation;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
         String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
+        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         assert mapFragment != null;
@@ -55,22 +70,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         //private Place apporx_place;
         //private double max_likelihood = 0;
         // apporx_place = getLocation();
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this);
-        fusedLocationClient.getLastLocation().addOnSuccessListener(this, new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
 
-
-                if (location != null){
-                    user = new LatLng(location.getLatitude(), location.getLongitude());
-                    mMap.addMarker(new MarkerOptions().position(user).title("User Location place"));
-                    Log.d("Location", "Location is not null");
-                }
-                else {
-
-                }
-            }
-        });
 
          //user = new LatLng(user_loc.getLatitude(), user_loc.getLongitude());
 
@@ -132,25 +132,24 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
 
-        // Add a marker in Sydney and move the camera
-        //LatLng user_pos = apporx_place.getLatLng();
-      // final LatLng loc = null;
-
            // googleMap.addMarker(new MarkerOptions().position(user).title("User Position Marker"));
            // googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
 
-        /*LatLng sydney = new LatLng(1.367551, 103.8535086);
-        googleMap.addMarker(new MarkerOptions().position(sydney).title("Some SG place"));
-        googleMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));*/
-        //setMarkers(nearbyCarParks, googleMap);
         mMap = googleMap;
 
         if(nearbyCarParks.size() >0)
         setMarkers(nearbyCarParks,mMap);
 
-      // LatLng sydney = new LatLng(-34, 151);
+        getLocationPermission();
+        updateLocationUI();
+        getDeviceLocation();
 
 
+    }
+
+    @Override
+    public boolean onMyLocationButtonClick() {
+        return false;
     }
 
     /*private class  databaseRead extends AsyncTask<String, Integer, String> {
@@ -262,7 +261,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.addMarker(new MarkerOptions().position(markerSet).title(title + " item" + (i)));
 
                 //zoom on last marker for proof of zoom level
-                //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerSet,15.0f));
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerSet,15.0f));
 
                 if(markerSet != null)
                 Log.d("setMarkers","Marker has item");
@@ -272,6 +271,90 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         }
     }
 
+    private void getLocationPermission() {
+        /*
+         * Request location permission, so that we can get the location of the
+         * device. The result of the permission request is handled by a callback,
+         * onRequestPermissionsResult.
+         */
+        if (ContextCompat.checkSelfPermission(this.getApplicationContext(),
+                android.Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED) {
+            mLocationPermissionGranted = true;
+        } else {
+            ActivityCompat.requestPermissions(this,
+                    new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION},
+                    PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION);
+        }
+    }
+    @Override
+    public void onRequestPermissionsResult(int requestCode,
+                                           @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        mLocationPermissionGranted = false;
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    mLocationPermissionGranted = true;
+                }
+            }
+        }
+        updateLocationUI();
+    }
+
+    private void updateLocationUI() {
+        if (mMap == null) {
+            return;
+        }
+        try {
+            if (mLocationPermissionGranted) {
+                mMap.setMyLocationEnabled(true);
+                mMap.getUiSettings().setMyLocationButtonEnabled(true);
+            } else {
+                mMap.setMyLocationEnabled(false);
+                mMap.getUiSettings().setMyLocationButtonEnabled(false);
+                mLastKnownLocation = null;
+                getLocationPermission();
+            }
+        } catch (SecurityException e)  {
+            Log.e("Exception: %s", e.getMessage());
+        }
+    }
+
+    private void getDeviceLocation() {
+        /*
+         * Get the best and most recent location of the device, which may be null in rare
+         * cases when a location is not available.
+         */
+        try {
+            if (mLocationPermissionGranted) {
+
+                Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
+                locationResult.addOnCompleteListener(this, new OnCompleteListener<Location>() {
+                    @Override
+                    public void onComplete(@NonNull Task<Location> task) {
+                        if (task.isSuccessful()) {
+                            // Set the map's camera position to the current location of the device.
+                            mLastKnownLocation = task.getResult();
+                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
+                                    new LatLng(mLastKnownLocation.getLatitude(),
+                                            mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
+                        } else {
+                            Log.d(TAG, "Current location is null. Using defaults.");
+                            Log.e(TAG, "Exception: %s", task.getException());
+                            mMap.moveCamera(CameraUpdateFactory
+                                    .newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
+                            mMap.getUiSettings().setMyLocationButtonEnabled(false);
+                        }
+                    }
+                });
+            }
+        } catch (SecurityException e)  {
+            Log.e("Exception: %s", e.getMessage());
+        }
+    }
 
 
 }
