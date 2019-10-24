@@ -7,8 +7,6 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.location.Location;
-import android.util.Log;
-
 import com.google.android.gms.maps.model.LatLng;
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -29,13 +27,14 @@ import java.util.Iterator;
 public class DBController extends SQLiteOpenHelper {
     private Context context;
     private ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
-    private String path = "carpark_info.xls";;
-    protected SQLiteDatabase mDefaultWritableDatabase = this.getWritableDatabase();
-    protected DBController(Context applicationcontext){
+    private String path = "carpark_info.xls";
+
+    public DBController(Context applicationcontext){
         super(applicationcontext, "CarparkDB.db", null, 1);
         // DATABASE is being created.
         context = applicationcontext;
-        readXLS(mDefaultWritableDatabase,path, "carparks");
+        SQLiteDatabase db = this.getWritableDatabase();
+        readXLS(db,path, "carparks");
     }
 
     @Override
@@ -46,7 +45,7 @@ public class DBController extends SQLiteOpenHelper {
         query_avail = "CREATE TABLE IF NOT EXISTS availability (car_park_no VARCHAR, total_lots INTEGER, lot_type VARCHAR, lots_available INTEGER, PRIMARY KEY(car_park_no, lot_type))";
         db.execSQL(query_carpark);
         db.execSQL(query_avail);
-        readXLS(db,path, "carparks");
+        readXLS(db, path, "carparks");
     }
 
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -62,8 +61,8 @@ public class DBController extends SQLiteOpenHelper {
         double user_lng = latLng.longitude;       // to the radius calculated.
         float[] results = new float[100];
         String selectQuery = "SELECT latitude, longitude FROM carparks";
-        //SQLiteDatabase db = this.getWritableDatabase();
-        Cursor cursor = mDefaultWritableDatabase.rawQuery(selectQuery, null);
+        SQLiteDatabase db = this.getWritableDatabase();
+        Cursor cursor = db.rawQuery(selectQuery, null);
         while(cursor.moveToNext()){
             int index = cursor.getColumnIndexOrThrow("Latitude");
             double lat = cursor.getDouble(index);
@@ -72,7 +71,7 @@ public class DBController extends SQLiteOpenHelper {
             Location.distanceBetween(user_lat,user_lng, lat, lng,results);
             if(results[0]<1000){
                 selectQuery = "SELECT * FROM carparks WHERE Latitude = "+lat+ " AND Longitude = "+lng;
-                Cursor cursor1 = mDefaultWritableDatabase.rawQuery(selectQuery,null);
+                Cursor cursor1 = db.rawQuery(selectQuery,null);
                 cursor1.moveToFirst();
                 String number = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_no"));
                 String address = cursor1.getString(cursor1.getColumnIndexOrThrow("address"));
@@ -87,18 +86,21 @@ public class DBController extends SQLiteOpenHelper {
                 double height  = cursor1.getDouble(cursor1.getColumnIndexOrThrow("gantry_height"));
                 String basement = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_basement"));
                 boolean val1 = false;
-                if( basement == "Y"){
+                if( basement.equals("Y")){
                     val1 = true;
                 }
                 CarPark carpark = new CarPark(number, address, latitude,longitude,car_park_type, system_type,term, night,free, decks, height,val1);
                 nearbyCarParks.add(carpark);
+                cursor1.close();
             }
 
         }
+
+        cursor.close();
         return nearbyCarParks;
     }
 
-    protected void readXLS(SQLiteDatabase db,String path, String tableName){
+    protected void readXLS(SQLiteDatabase db, String path, String tableName){
         //SQLiteDatabase db = this.getWritableDatabase();
         db.execSQL("delete from "+ tableName);
         db.beginTransaction();
@@ -179,12 +181,12 @@ public class DBController extends SQLiteOpenHelper {
     }
 
     protected void carParkAvailability(JSONArray response, String tableName){
-        //SQLiteDatabase db = this.getWritableDatabase();
-        mDefaultWritableDatabase.execSQL("delete from " + tableName);
+        SQLiteDatabase db = this.getWritableDatabase();
+        db.execSQL("delete from " + tableName);
         ContentValues contentValues = new ContentValues();
-        mDefaultWritableDatabase.beginTransaction();
+        db.beginTransaction();
         for(int i = 0; i<response.length();i++){
-            JSONObject carParkData = null;
+            JSONObject carParkData;
             try {
                 carParkData = (JSONObject) response.get(i);
                 String carParkNumber = carParkData.get("carpark_number").toString();
@@ -196,25 +198,15 @@ public class DBController extends SQLiteOpenHelper {
                 contentValues.put("total_lots", lots);
                 contentValues.put("lots_available", lotsAvail);
                 contentValues.put("lot_type", type);
-                mDefaultWritableDatabase.insert(tableName, null, contentValues);
+                db.insert(tableName, null, contentValues);
             }catch (JSONException e) {
                 e.printStackTrace();
             }
 
         }
-        mDefaultWritableDatabase.setTransactionSuccessful();
-        mDefaultWritableDatabase.endTransaction();
+        db.setTransactionSuccessful();
+        db.endTransaction();
     }
 
-    @Override
-    public SQLiteDatabase getWritableDatabase() {
-        final SQLiteDatabase db;
-        if(mDefaultWritableDatabase != null){
-            db = mDefaultWritableDatabase;
-        } else {
-            db = super.getWritableDatabase();
-        }
-        return db;
-    }
 
 }

@@ -1,11 +1,11 @@
 package com.example.parkwhere;
 
-import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -18,6 +18,10 @@ import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationCallback;
+import com.google.android.gms.location.LocationListener;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
@@ -26,29 +30,28 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
-import java.security.Permissions;
 import java.util.ArrayList;
-import java.util.concurrent.ExecutionException;
 
 
-public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener {
+public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, LocationListener {
 
     private static final String TAG = MapsActivity.class.getSimpleName() ;
     private FusedLocationProviderClient mFusedLocationProviderClient;
-    private LatLng user;
+    private LocationRequest mLocationRequest;
+    private LatLng user_loc;
+    private DBController controller;
     protected ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
     private GoogleMap mMap;
     private final LatLng mDefaultLocation = new LatLng(-33.8523341, 151.2106085);
     private static final int DEFAULT_ZOOM = 15;
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION = 1;
     private boolean mLocationPermissionGranted;
+    private LocationCallback mLocationCallback;
     private Location mLastKnownLocation;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,14 +59,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-       // mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        /*SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         assert mapFragment != null;
-        mapFragment.getMapAsync(this);*/
+        mapFragment.getMapAsync(this);
+        mLocationRequest = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationCallback = new LocationCallback(){
+            public void onLocationResult(LocationResult locationResult){
+                handleNewLocation(locationResult.getLastLocation());
+            }
+        };
+        controller = new DBController(getApplicationContext());
         new availabilityReq(getApplicationContext()).execute(availability);
-        DBController controller = new DBController(getApplicationContext());
-        controller.getWritableDatabase();
         fetchNearbyCarParks();//get nearby carparks first
 
         //new fetchNearbyCarParks().execute("");//async method not using.
@@ -145,9 +153,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    public boolean onMyLocationButtsonClick() {
+    public boolean onMyLocationButtonClick() {
         return false;
     }
+
+    @Override
+    public void onLocationChanged(Location location) {
+        handleNewLocation(location);
+    }
+
+    private void handleNewLocation(Location location) {
+        user_loc = new LatLng(location.getLatitude(), location.getLongitude());
+        return;
+    }
+
 
     /*private class  databaseRead extends AsyncTask<String, Integer, String> {
 
@@ -185,7 +204,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                         try {
                             JSONObject carPark_info = (JSONObject) response.getJSONArray("items").get(0);
                             JSONArray info = carPark_info.getJSONArray("carpark_data");
-                            DBController controller = new DBController(getApplicationContext());
+                            DBController controller = new DBController(context);
                             controller.getWritableDatabase();
                             String name = "availability";
                             controller.carParkAvailability(info, name);
@@ -208,8 +227,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void fetchNearbyCarParks(){
         LatLng test = new LatLng(1.367551, 103.8535086);
-        DBController dbController = new DBController(getApplicationContext());
-        nearbyCarParks = dbController.getCarparks(test);
+        nearbyCarParks = controller.getCarparks(test);
         Log.d("size", String.valueOf(nearbyCarParks.size()));
     }
 
@@ -299,13 +317,18 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 locationResult.addOnCompleteListener(this, new OnCompleteListener<Location>() {
                     @Override
                     public void onComplete(@NonNull Task<Location> task) {
-                        if (task.isSuccessful()) {
+                        if (task.isSuccessful() && task.getResult()!= null) {
                             // Set the map's camera position to the current location of the device.
                             mLastKnownLocation = task.getResult();
                             mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
                                     new LatLng(mLastKnownLocation.getLatitude(),
                                             mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
-                        } else {
+                        }
+                        else if(task.getResult() == null) {
+                            mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest,mLocationCallback, Looper.myLooper());
+                        }
+                          else
+                         {
                             Log.d(TAG, "Current location is null. Using defaults.");
                             Log.e(TAG, "Exception: %s", task.getException());
                             mMap.moveCamera(CameraUpdateFactory
