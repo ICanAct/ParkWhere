@@ -7,6 +7,7 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.location.Location;
+import android.util.Log;
 
 import com.google.android.gms.maps.model.LatLng;
 import org.apache.poi.hssf.usermodel.HSSFCell;
@@ -34,8 +35,7 @@ public class DBController extends SQLiteOpenHelper {
         super(applicationcontext, "CarparkDB.db", null, 1);
         // DATABASE is being created.
         context = applicationcontext;
-
-
+        readXLS(mDefaultWritableDatabase,path, "carparks");
     }
 
     @Override
@@ -46,9 +46,7 @@ public class DBController extends SQLiteOpenHelper {
         query_avail = "CREATE TABLE IF NOT EXISTS availability (car_park_no VARCHAR, total_lots INTEGER, lot_type VARCHAR, lots_available INTEGER, PRIMARY KEY(car_park_no, lot_type))";
         db.execSQL(query_carpark);
         db.execSQL(query_avail);
-       // readXLS(db,path, "carparks");
-
-
+        readXLS(db,path, "carparks");
     }
 
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
@@ -56,15 +54,13 @@ public class DBController extends SQLiteOpenHelper {
         query = "DROP TABLE IF EXISTS carparks"; // UPDATE THE QUERY STATEMENT
         db.execSQL(query);
         db.execSQL("DROP TABLE IF EXISTS availability");
-
         onCreate(db);
-
     }
 
     public ArrayList<CarPark> getCarparks(LatLng latLng){ // RETURNS THE ARRAY OF CARPARKS NEARBY THE LOCATION
         double user_lat = latLng.latitude;        // FOR the query part please change accordingly
         double user_lng = latLng.longitude;       // to the radius calculated.
-        float[] results = new float[1];
+        float[] results = new float[100];
         String selectQuery = "SELECT latitude, longitude FROM carparks";
         //SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = mDefaultWritableDatabase.rawQuery(selectQuery, null);
@@ -97,7 +93,6 @@ public class DBController extends SQLiteOpenHelper {
                 CarPark carpark = new CarPark(number, address, latitude,longitude,car_park_type, system_type,term, night,free, decks, height,val1);
                 nearbyCarParks.add(carpark);
             }
-
 
         }
         return nearbyCarParks;

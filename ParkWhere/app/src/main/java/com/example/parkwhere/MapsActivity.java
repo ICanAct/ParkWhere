@@ -56,11 +56,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         setContentView(R.layout.activity_maps);
         String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
-        mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+       // mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
+        /*SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         assert mapFragment != null;
-        mapFragment.getMapAsync(this);
+        mapFragment.getMapAsync(this);*/
         new availabilityReq(getApplicationContext()).execute(availability);
         DBController controller = new DBController(getApplicationContext());
         controller.getWritableDatabase();
@@ -73,8 +73,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
          //user = new LatLng(user_loc.getLatitude(), user_loc.getLongitude());
-
-
     }
 
    /* private Place getLocation(){
@@ -135,9 +133,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
            // googleMap.addMarker(new MarkerOptions().position(user).title("User Position Marker"));
            // googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
 
-        mMap = googleMap;
 
-        if(nearbyCarParks.size() >0)
+        mMap = googleMap;
         setMarkers(nearbyCarParks,mMap);
 
         getLocationPermission();
@@ -148,7 +145,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     @Override
-    public boolean onMyLocationButtonClick() {
+    public boolean onMyLocationButtsonClick() {
         return false;
     }
 
@@ -208,60 +205,26 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
-    private class fetchNearbyCarParks extends AsyncTask<String, Integer, Void> {
-        //ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
-        @Override
-        protected Void doInBackground(String... strings) {
-            LatLng test = new LatLng(1.367551, 103.8535086);
-            DBController dbController = new DBController(getApplicationContext());
-            nearbyCarParks = dbController.getCarparks(test);
-            if(nearbyCarParks != null)
-            {
 
-                for(int i=0;i<nearbyCarParks.size();i++)
-                Log.d("nearbyCarpark",nearbyCarParks.get(i).getCar_park_no() + "Lat"+nearbyCarParks.get(i).getLatitude()+"Lng"+nearbyCarParks.get(i).getLongitude());
-
-                for(int i=0;i<nearbyCarParks.size();i++) {
-                    Log.d("nearbyCarpark", nearbyCarParks.get(i).getCar_park_no().toString() + "Lat" + nearbyCarParks.get(i).getLatitude() + "Lng" + nearbyCarParks.get(i).getLongitude());
-                }
-
-                int size = nearbyCarParks.size();
-                Log.d("size", String.valueOf(size));
-
-            }
-
-            return null;
-        }
-    }
     private void fetchNearbyCarParks(){
         LatLng test = new LatLng(1.367551, 103.8535086);
         DBController dbController = new DBController(getApplicationContext());
         nearbyCarParks = dbController.getCarparks(test);
-        if(nearbyCarParks != null)
-        {
-            for(int i=0;i<nearbyCarParks.size();i++) {
-                Log.d("nearbyCarpark", nearbyCarParks.get(i).getCar_park_no().toString() + "Lat" + nearbyCarParks.get(i).getLatitude() + "Lng" + nearbyCarParks.get(i).getLongitude());
-            }
-
-            int size = nearbyCarParks.size();
-            Log.d("size", String.valueOf(size));
-
-        }
+        Log.d("size", String.valueOf(nearbyCarParks.size()));
     }
 
     private void setMarkers(ArrayList<CarPark> nearbyCarParks, GoogleMap mMap){
         if(nearbyCarParks != null)
         {//create nearbycarpark markers
-            for(int i=0;i<nearbyCarParks.size();i++)
+            for(int i=0;i<1;i++)
             {
                 String title = nearbyCarParks.get(i).getAddress().toString();
                 double lat = nearbyCarParks.get(i).getLatitude();
                 double lng = nearbyCarParks.get(i).getLongitude();
                 LatLng markerSet = new LatLng(lat, lng);
                 mMap.addMarker(new MarkerOptions().position(markerSet).title(title + " item" + (i)));
-
                 //zoom on last marker for proof of zoom level
-                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerSet,15.0f));
+                //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerSet,15.0f));
 
                 if(markerSet != null)
                 Log.d("setMarkers","Marker has item");
@@ -269,6 +232,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
         }
+
     }
 
     private void getLocationPermission() {
