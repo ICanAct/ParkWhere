@@ -71,9 +71,15 @@ public class DBController extends SQLiteOpenHelper {
             Location.distanceBetween(user_lat,user_lng, lat, lng,results);
             if(results[0]<1000){
                 selectQuery = "SELECT * FROM carparks WHERE Latitude = "+lat+ " AND Longitude = "+lng;
+
                 Cursor cursor1 = db.rawQuery(selectQuery,null);
                 cursor1.moveToFirst();
                 String number = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_no"));
+                String selectQuery2 = "SELECT * FROM availability WHERE car_park_no = '"+number+"'";
+                Cursor cursor2 = db.rawQuery(selectQuery2, null);
+                cursor2.moveToFirst();
+                int free_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
+                int total_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
                 String address = cursor1.getString(cursor1.getColumnIndexOrThrow("address"));
                 double latitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Latitude"));
                 double longitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Longitude"));
@@ -90,7 +96,10 @@ public class DBController extends SQLiteOpenHelper {
                     val1 = true;
                 }
                 CarPark carpark = new CarPark(number, address, latitude,longitude,car_park_type, system_type,term, night,free, decks, height,val1);
+                carpark.setFree_lots(free_lots);
+                carpark.setParking_lots(total_lots);
                 nearbyCarParks.add(carpark);
+                cursor2.close();
                 cursor1.close();
             }
 

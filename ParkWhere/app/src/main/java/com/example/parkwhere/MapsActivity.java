@@ -28,6 +28,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -72,7 +73,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         };
         controller = new DBController(getApplicationContext());
         new availabilityReq(getApplicationContext()).execute(availability);
-        fetchNearbyCarParks();//get nearby carparks first
 
         //new fetchNearbyCarParks().execute("");//async method not using.
         //private Place apporx_place;
@@ -141,10 +141,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
            // googleMap.addMarker(new MarkerOptions().position(user).title("User Position Marker"));
            // googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
 
-
         mMap = googleMap;
-        setMarkers(nearbyCarParks,mMap);
-
         getLocationPermission();
         updateLocationUI();
         getDeviceLocation();
@@ -164,27 +161,11 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     private void handleNewLocation(Location location) {
         user_loc = new LatLng(location.getLatitude(), location.getLongitude());
+        fetchNearbyCarParks(user_loc);
+        setMarkers(nearbyCarParks,mMap);
         return;
     }
 
-
-    /*private class  databaseRead extends AsyncTask<String, Integer, String> {
-
-        @Override
-        protected String doInBackground(String... path) {
-            DBController controller = new DBController(getApplicationContext());
-            controller.getWritableDatabase();
-            String name = "carparks";
-            controller.readXLS(path[0], name);
-            return "The values stored into the database successfully!";
-        }
-
-        @Override
-        protected void onPostExecute(String result){
-            super.onPostExecute(result);
-            // Anything to do after database process completes.
-        }
-    }*/
 
     private class availabilityReq extends AsyncTask<String, Integer, String> {
 
@@ -225,22 +206,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    private void fetchNearbyCarParks(){
-        LatLng test = new LatLng(1.367551, 103.8535086);
-        nearbyCarParks = controller.getCarparks(test);
+    private void fetchNearbyCarParks(LatLng user_loc){
+        nearbyCarParks = controller.getCarparks(user_loc);
         Log.d("size", String.valueOf(nearbyCarParks.size()));
     }
 
     private void setMarkers(ArrayList<CarPark> nearbyCarParks, GoogleMap mMap){
         if(nearbyCarParks != null)
         {//create nearbycarpark markers
-            for(int i=0;i<1;i++)
+            for(int i=0;i<nearbyCarParks.size();i++)
             {
-                String title = nearbyCarParks.get(i).getAddress().toString();
+                String title = nearbyCarParks.get(i).getAddress();
                 double lat = nearbyCarParks.get(i).getLatitude();
                 double lng = nearbyCarParks.get(i).getLongitude();
                 LatLng markerSet = new LatLng(lat, lng);
-                mMap.addMarker(new MarkerOptions().position(markerSet).title(title + " item" + (i)));
+                mMap.addMarker(new MarkerOptions().position(markerSet).title(title).snippet("Parking Lots : "+nearbyCarParks.get(i).getParking_lots()).snippet("Free Lots: "+ nearbyCarParks.get(i).getFree_lots()));
                 //zoom on last marker for proof of zoom level
                 //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerSet,15.0f));
 
@@ -313,34 +293,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         try {
             if (mLocationPermissionGranted) {
 
-                Task<Location> locationResult = mFusedLocationProviderClient.getLastLocation();
-                locationResult.addOnCompleteListener(this, new OnCompleteListener<Location>() {
-                    @Override
-                    public void onComplete(@NonNull Task<Location> task) {
-                        if (task.isSuccessful() && task.getResult()!= null) {
-                            // Set the map's camera position to the current location of the device.
-                            mLastKnownLocation = task.getResult();
-                            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(
-                                    new LatLng(mLastKnownLocation.getLatitude(),
-                                            mLastKnownLocation.getLongitude()), DEFAULT_ZOOM));
-                        }
-                        else if(task.getResult() == null) {
-                            mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest,mLocationCallback, Looper.myLooper());
-                        }
-                          else
-                         {
-                            Log.d(TAG, "Current location is null. Using defaults.");
-                            Log.e(TAG, "Exception: %s", task.getException());
-                            mMap.moveCamera(CameraUpdateFactory
-                                    .newLatLngZoom(mDefaultLocation, DEFAULT_ZOOM));
-                            mMap.getUiSettings().setMyLocationButtonEnabled(false);
-                        }
-                    }
-                });
+                mFusedLocationProviderClient.requestLocationUpdates(mLocationRequest,mLocationCallback,Looper.myLooper());
             }
         } catch (SecurityException e)  {
             Log.e("Exception: %s", e.getMessage());
         }
+
+
+
     }
 
 

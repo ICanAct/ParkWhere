@@ -10,6 +10,26 @@ public class CarPark {
     private String parkingSystem;
     private String short_term_parking;
     private String night_parking;
+
+    public int getParking_lots() {
+        return parking_lots;
+    }
+
+    public void setParking_lots(int parking_lots) {
+        this.parking_lots = parking_lots;
+    }
+
+    private int parking_lots;
+
+    public int getFree_lots() {
+        return free_lots;
+    }
+
+    public void setFree_lots(int free_lots) {
+        this.free_lots = free_lots;
+    }
+
+    private int free_lots;
     private String free_parking;
     private int car_park_decks;
     private double gantry_height;
