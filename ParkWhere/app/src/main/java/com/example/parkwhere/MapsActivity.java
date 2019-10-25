@@ -65,7 +65,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         assert mapFragment != null;
         mapFragment.getMapAsync(this);
-        mLocationRequest = LocationRequest.create().setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
+        mLocationRequest = LocationRequest.create();
+        mLocationRequest.setInterval(10000);
+        mLocationRequest.setFastestInterval(5000);
+        mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationCallback = new LocationCallback(){
             public void onLocationResult(LocationResult locationResult){
                 handleNewLocation(locationResult.getLastLocation());
@@ -73,7 +76,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         };
         controller = new DBController(getApplicationContext());
         new availabilityReq(getApplicationContext()).execute(availability);
-
         //new fetchNearbyCarParks().execute("");//async method not using.
         //private Place apporx_place;
         //private double max_likelihood = 0;
@@ -142,6 +144,19 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
            // googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
 
         mMap = googleMap;
+        mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener(){
+            @Override
+            public boolean onMyLocationButtonClick()
+            {
+                mMap.clear();//clear any other previous markers
+                Log.d("user_loc","at MYLocationButtonClick"+user_loc.latitude + user_loc.longitude);
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user_loc,15.0f));
+                //fetchNearbyCarParks(user_loc);
+                //setMarkers(nearbyCarParks,mMap);
+
+                return false;
+            }
+        });
         getLocationPermission();
         updateLocationUI();
         getDeviceLocation();
@@ -151,7 +166,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public boolean onMyLocationButtonClick() {
-        return false;
+        return true;
     }
 
     @Override
@@ -160,9 +175,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void handleNewLocation(Location location) {
-        user_loc = new LatLng(location.getLatitude(), location.getLongitude());
+        mMap.clear();//clears map of all markers first before updating more markers.
+        if(location != null)
+            user_loc = new LatLng(location.getLatitude(), location.getLongitude());
+        Log.d("user_loc","at handleNewLocation lat "+user_loc.latitude +"Lng "+ user_loc.longitude);
         fetchNearbyCarParks(user_loc);
         setMarkers(nearbyCarParks,mMap);
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user_loc,15.0f));
         return;
     }
 
@@ -207,12 +226,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     private void fetchNearbyCarParks(LatLng user_loc){
+        nearbyCarParks.clear();//clears array of previous location nearbycarparks items
         nearbyCarParks = controller.getCarparks(user_loc);
         Log.d("size", String.valueOf(nearbyCarParks.size()));
     }
 
     private void setMarkers(ArrayList<CarPark> nearbyCarParks, GoogleMap mMap){
-        if(nearbyCarParks != null)
+
+        if(nearbyCarParks.size()>0)
         {//create nearbycarpark markers
             for(int i=0;i<nearbyCarParks.size();i++)
             {
@@ -230,6 +251,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
         }
+        else
+            Log.d("setMarkers","No Nearby Carparks");
 
     }
 

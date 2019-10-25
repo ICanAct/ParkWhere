@@ -7,6 +7,8 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.location.Location;
+import android.util.Log;
+
 import com.google.android.gms.maps.model.LatLng;
 import org.apache.poi.hssf.usermodel.HSSFCell;
 import org.apache.poi.hssf.usermodel.HSSFRow;
@@ -59,7 +61,7 @@ public class DBController extends SQLiteOpenHelper {
     public ArrayList<CarPark> getCarparks(LatLng latLng){ // RETURNS THE ARRAY OF CARPARKS NEARBY THE LOCATION
         double user_lat = latLng.latitude;        // FOR the query part please change accordingly
         double user_lng = latLng.longitude;       // to the radius calculated.
-        float[] results = new float[100];
+        float[] results = new float[10];
         String selectQuery = "SELECT latitude, longitude FROM carparks";
         SQLiteDatabase db = this.getWritableDatabase();
         Cursor cursor = db.rawQuery(selectQuery, null);
@@ -77,30 +79,37 @@ public class DBController extends SQLiteOpenHelper {
                 String number = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_no"));
                 String selectQuery2 = "SELECT * FROM availability WHERE car_park_no = '"+number+"'";
                 Cursor cursor2 = db.rawQuery(selectQuery2, null);
-                cursor2.moveToFirst();
-                int free_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
-                int total_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
-                String address = cursor1.getString(cursor1.getColumnIndexOrThrow("address"));
-                double latitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Latitude"));
-                double longitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Longitude"));
-                String system_type = cursor1.getString(cursor1.getColumnIndexOrThrow("type_of_parking_system"));
-                String car_park_type = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_type"));
-                String free = cursor1.getString(cursor1.getColumnIndexOrThrow("free_parking"));
-                String term = cursor1.getString(cursor1.getColumnIndexOrThrow("short_term_parking"));
-                String night = cursor1.getString(cursor1.getColumnIndexOrThrow("night_parking"));
-                int decks = cursor1.getInt(cursor1.getColumnIndexOrThrow("car_park_decks"));
-                double height  = cursor1.getDouble(cursor1.getColumnIndexOrThrow("gantry_height"));
-                String basement = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_basement"));
-                boolean val1 = false;
-                if( basement.equals("Y")){
-                    val1 = true;
+                if( cursor2 != null && cursor2.moveToFirst())
+                {
+                    Log.d("DBController","Got item in cursor 2");
                 }
-                CarPark carpark = new CarPark(number, address, latitude,longitude,car_park_type, system_type,term, night,free, decks, height,val1);
-                carpark.setFree_lots(free_lots);
-                carpark.setParking_lots(total_lots);
-                nearbyCarParks.add(carpark);
-                cursor2.close();
-                cursor1.close();
+                else
+                    Log.d("DBController","Null cursor2");
+                if(cursor2.getCount()>0) {
+                    int free_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
+                    int total_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
+                    String address = cursor1.getString(cursor1.getColumnIndexOrThrow("address"));
+                    double latitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Latitude"));
+                    double longitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Longitude"));
+                    String system_type = cursor1.getString(cursor1.getColumnIndexOrThrow("type_of_parking_system"));
+                    String car_park_type = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_type"));
+                    String free = cursor1.getString(cursor1.getColumnIndexOrThrow("free_parking"));
+                    String term = cursor1.getString(cursor1.getColumnIndexOrThrow("short_term_parking"));
+                    String night = cursor1.getString(cursor1.getColumnIndexOrThrow("night_parking"));
+                    int decks = cursor1.getInt(cursor1.getColumnIndexOrThrow("car_park_decks"));
+                    double height = cursor1.getDouble(cursor1.getColumnIndexOrThrow("gantry_height"));
+                    String basement = cursor1.getString(cursor1.getColumnIndexOrThrow("car_park_basement"));
+                    boolean val1 = false;
+                    if (basement.equals("Y")) {
+                        val1 = true;
+                    }
+                    CarPark carpark = new CarPark(number, address, latitude, longitude, car_park_type, system_type, term, night, free, decks, height, val1);
+                    carpark.setFree_lots(free_lots);
+                    carpark.setParking_lots(total_lots);
+                    nearbyCarParks.add(carpark);
+                    cursor2.close();
+                    cursor1.close();
+                }
             }
 
         }
