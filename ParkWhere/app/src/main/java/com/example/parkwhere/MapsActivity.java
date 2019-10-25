@@ -17,6 +17,7 @@ import com.android.volley.Request;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.android.gms.common.api.Status;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationListener;
@@ -32,11 +33,17 @@ import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
+import com.google.android.libraries.places.api.Places;
+import com.google.android.libraries.places.api.model.Place;
+import com.google.android.libraries.places.widget.AutocompleteSupportFragment;
+import com.google.android.libraries.places.widget.listener.PlaceSelectionListener;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Locale;
 
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMyLocationButtonClickListener, LocationListener {
@@ -47,6 +54,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LatLng user_loc;
     private DBController controller;
     protected ArrayList<CarPark> nearbyCarParks = new ArrayList<>();
+    protected ArrayList<CarPark> searchCarparks = new ArrayList<>();
     private GoogleMap mMap;
     private final LatLng mDefaultLocation = new LatLng(-33.8523341, 151.2106085);
     private static final int DEFAULT_ZOOM = 15;
@@ -54,17 +62,62 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private boolean mLocationPermissionGranted;
     private LocationCallback mLocationCallback;
     private Location mLastKnownLocation;
+    protected Place destination;
+    private boolean zoomedToLoc = false;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_maps);
         String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
+
         assert mapFragment != null;
+
+
+        if (!Places.isInitialized()) {
+            Places.initialize(getApplicationContext(), getString(R.string.api_key), Locale.US);
+        }
+
+        // Initialize the AutocompleteSupportFragment.
+        AutocompleteSupportFragment autocompleteFragment = (AutocompleteSupportFragment)
+                getSupportFragmentManager().findFragmentById(R.id.autocomplete_fragment);
+
+
+        // Specify the types of place data to return.
+        autocompleteFragment.setPlaceFields(Arrays.asList(Place.Field.ID, Place.Field.NAME, Place.Field.LAT_LNG));
+
+        // Set up a PlaceSelectionListener to handle the response.
+        autocompleteFragment.setOnPlaceSelectedListener(new PlaceSelectionListener() {
+            @Override
+            public void onPlaceSelected(Place place) {
+                // TODO: Get info about the selected place.
+                destination = place;
+                Log.i(TAG, "Place: " + destination.getName() + ", " + destination.getId()+ destination.getLatLng());
+                Log.i(TAG, "Place: " + destination.getName() + ", " + place.getLatLng());
+
+                fetchNearbyCarParks(destination.getLatLng());
+                setMarkers(nearbyCarParks,mMap);
+                mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(destination.getLatLng(),15.0f));
+            }
+
+            @Override
+            public void onError(Status status) {
+                // TODO: Handle the error.
+                Log.i(TAG, "An error occurred: " + status);
+            }
+
+
+        });
+
+        //async fragments to map layout
         mapFragment.getMapAsync(this);
+
+        //set location request to seek location update on interval
         mLocationRequest = LocationRequest.create();
         mLocationRequest.setInterval(10000);
         mLocationRequest.setFastestInterval(5000);
@@ -144,11 +197,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
            // googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user, 10));
 
         mMap = googleMap;
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setAllGesturesEnabled(true);
+
         mMap.setOnMyLocationButtonClickListener(new GoogleMap.OnMyLocationButtonClickListener(){
             @Override
             public boolean onMyLocationButtonClick()
             {
-                mMap.clear();//clear any other previous markers
+                //mMap.clear();//clear any other previous markers
                 Log.d("user_loc","at MYLocationButtonClick"+user_loc.latitude + user_loc.longitude);
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user_loc,15.0f));
                 //fetchNearbyCarParks(user_loc);
@@ -160,8 +216,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         getLocationPermission();
         updateLocationUI();
         getDeviceLocation();
-
-
     }
 
     @Override
@@ -175,13 +229,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void handleNewLocation(Location location) {
-        mMap.clear();//clears map of all markers first before updating more markers.
+        //mMap.clear();//clears map of all markers even circle drawings and such first before updating more markers.
         if(location != null)
             user_loc = new LatLng(location.getLatitude(), location.getLongitude());
         Log.d("user_loc","at handleNewLocation lat "+user_loc.latitude +"Lng "+ user_loc.longitude);
         fetchNearbyCarParks(user_loc);
         setMarkers(nearbyCarParks,mMap);
+        if(!zoomedToLoc){//so that only zooms once in the entire app when handlenewlocation
         mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user_loc,15.0f));
+        zoomedToLoc = true;
+        }
         return;
     }
 
@@ -325,6 +382,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
     }
+
 
 
 }
