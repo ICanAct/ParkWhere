@@ -87,7 +87,7 @@ public class DBController extends SQLiteOpenHelper {
                     Log.d("DBController","Null cursor2");
                 if(cursor2.getCount()>0) {
                     int free_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
-                    int total_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("lots_available"));
+                    int total_lots = cursor2.getInt(cursor2.getColumnIndexOrThrow("total_lots"));
                     String address = cursor1.getString(cursor1.getColumnIndexOrThrow("address"));
                     double latitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Latitude"));
                     double longitude = cursor1.getDouble(cursor1.getColumnIndexOrThrow("Longitude"));

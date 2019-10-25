@@ -2,11 +2,17 @@ package com.example.parkwhere;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Looper;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.View;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -63,6 +69,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     private LocationCallback mLocationCallback;
     private Location mLastKnownLocation;
     protected Place destination;
+    private Context context;
     private boolean zoomedToLoc = false;
 
     @Override
@@ -78,7 +85,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         assert mapFragment != null;
 
-
+        context = getApplicationContext();
         if (!Places.isInitialized()) {
             Places.initialize(getApplicationContext(), getString(R.string.api_key), Locale.US);
         }
@@ -294,11 +301,39 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         {//create nearbycarpark markers
             for(int i=0;i<nearbyCarParks.size();i++)
             {
+                CarPark carPark = nearbyCarParks.get(i);
                 String title = nearbyCarParks.get(i).getAddress();
                 double lat = nearbyCarParks.get(i).getLatitude();
                 double lng = nearbyCarParks.get(i).getLongitude();
                 LatLng markerSet = new LatLng(lat, lng);
-                mMap.addMarker(new MarkerOptions().position(markerSet).title(title).snippet("Parking Lots : "+nearbyCarParks.get(i).getParking_lots()).snippet("Free Lots: "+ nearbyCarParks.get(i).getFree_lots()));
+                String carPark_info = "Car Park Type: "+ carPark.getCar_park_type()+"\nFree Parking: "+carPark.getFree_parking()+"\nTotal Parking Lots: "+carPark.getParking_lots()+"\nAvailable Lots: "+carPark.getFree_lots();
+                mMap.addMarker(new MarkerOptions().position(markerSet).title(title).snippet(carPark_info));
+                mMap.setInfoWindowAdapter(new GoogleMap.InfoWindowAdapter() {
+                    @Override
+                    public View getInfoWindow(Marker marker) {
+                        return null;
+                    }
+
+                    @Override
+                    public View getInfoContents(Marker marker) {
+                        LinearLayout info = new LinearLayout(context);
+                        info.setOrientation(LinearLayout.VERTICAL);
+
+                        TextView title = new TextView(context);
+                        title.setTextColor(Color.BLACK);
+                        title.setGravity(Gravity.CENTER);
+                        title.setTypeface(null, Typeface.BOLD);
+                        title.setText(marker.getTitle());
+
+                        TextView snippet = new TextView(context);
+                        snippet.setTextColor(Color.GRAY);
+                        snippet.setText(marker.getSnippet());
+
+                        info.addView(title);
+                        info.addView(snippet);
+                        return info;
+                    }
+                });
                 //zoom on last marker for proof of zoom level
                 //mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(markerSet,15.0f));
 
