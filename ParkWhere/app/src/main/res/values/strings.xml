@@ -2,4 +2,5 @@
     <string name="app_name">ParkWhere</string>
     <string name="title_activity_maps">Map</string>
     <string name="api_key">AIzaSyCpEIiaBqjAn_-wsbvS5y7_ve1N2ld5lIo</string>
+    <string name="button_text">Refresh Avaliability</string>
 </resources>

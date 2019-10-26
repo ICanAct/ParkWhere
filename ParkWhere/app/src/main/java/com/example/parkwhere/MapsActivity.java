@@ -1,6 +1,8 @@
 package com.example.parkwhere;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.graphics.Typeface;
@@ -71,13 +73,15 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     protected Place destination;
     private Context context;
     private boolean zoomedToLoc = false;
-
+    private boolean autoFlag = false; //show no carpark nearby once for auto nearby for current location. on locationbuttonclick then reset to false
+    private boolean searchFlag = false; // show no carpark nearby for searched area once, only when user search location activates different message
+    String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
         setContentView(R.layout.activity_maps);
-        String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
+        //String availability = "https://api.data.gov.sg/v1/transport/carpark-availability";
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         mFusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
@@ -106,7 +110,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 destination = place;
                 Log.i(TAG, "Place: " + destination.getName() + ", " + destination.getId()+ destination.getLatLng());
                 Log.i(TAG, "Place: " + destination.getName() + ", " + place.getLatLng());
-
+                searchFlag = false; // ensures that proceeding searches after this can obtain notification message if there is no nearby carparks
                 fetchNearbyCarParks(destination.getLatLng());
                 setMarkers(nearbyCarParks,mMap);
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(destination.getLatLng(),15.0f));
@@ -212,6 +216,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             public boolean onMyLocationButtonClick()
             {
                 //mMap.clear();//clear any other previous markers
+                autoFlag = false;//reset autoFlag for user to know if he has no nearby carparks
                 Log.d("user_loc","at MYLocationButtonClick"+user_loc.latitude + user_loc.longitude);
                 mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(user_loc,15.0f));
                 //fetchNearbyCarParks(user_loc);
@@ -247,6 +252,10 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         zoomedToLoc = true;
         }
         return;
+    }
+
+    public void refresh(View view) {
+        new availabilityReq(getApplicationContext()).execute(availability);
     }
 
 
@@ -344,7 +353,36 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         }
         else
-            Log.d("setMarkers","No Nearby Carparks");
+        {
+            AlertDialog alertDialog = new AlertDialog.Builder(MapsActivity.this).create();
+            alertDialog.setTitle("No nearby Carkparks");
+            if(autoFlag == false) {
+
+                alertDialog.setMessage("There are no nearby carparks within 1KM of your location");
+                alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        });
+                alertDialog.show();
+                autoFlag = true;
+                Log.d("setMarkers", "No Nearby Carparks");
+            }
+            if(searchFlag == false)
+            {
+                alertDialog.setMessage("There are no nearby carparks within 1KM of searched location");
+                alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "OK",
+                        new DialogInterface.OnClickListener() {
+                            public void onClick(DialogInterface dialog, int which) {
+                                dialog.dismiss();
+                            }
+                        });
+                alertDialog.show();
+                searchFlag = true;
+                Log.d("setMarkers", "Search No Nearby Carparks");
+            }
+        }
 
     }
 
@@ -416,7 +454,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    }
+}
 
 
 
